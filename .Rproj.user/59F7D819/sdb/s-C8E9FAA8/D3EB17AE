@@ -1,0 +1,17 @@
+{
+    "contents" : "## Script: load-inv.R\n## Author: Miguel Ángel García\n## ©2015 Deep Data Lab\n## All rights reserved\n\n## Load libraries\nlibrary(dplyr)\nlibrary(ggplot2)\nlibrary(splines)\nrequire(stats)\n\n# Cargar datos desde el CSV de Jim Sports de las tablas OINV y INV1\n#factDS <- tbl_df(read.csv(\"Data/OINV20150929.csv\", sep=\";\", quote =\"\"))\n\n# Añadimos el mes y año\nfactDS$yearmonth <- factor(format(as.Date(factDS$H.DocDate), \"%Y-%m\"))\nfactDS$year <- factor(format(as.Date(factDS$H.DocDate), \"%Y\"))\nfactDS$month <- factor(format(as.Date(factDS$H.DocDate), \"%m\"))\n\nlist_prod <- c(\"0505910\", \"0503040\", \"0503030\", \"0009660\", \"0504121\", \"0019931\", \n               \"0505911\", \"0501202\", \"0007401\", \"7801543\")\n\n# Filtramos los campos que necesitamos en un nuevo DS\nfactPrbyYear <- factDS %>%\n    select(L.ItemCode, yearmonth, year, L.Quantity) %>%\n    filter(L.ItemCode %in% list_prod) %>%\n    group_by(year, yearmonth, L.ItemCode) %>%\n    summarise(ventas = sum(L.Quantity))\n\n# Recorremos los productos para obtener un gráfico de cada uno de ellos\nfor(i in 1:length(list_prod))\n{\n    factPr <- factPrbyYear %>% filter(L.ItemCode == list_prod[i])\n    # Plot the graph\n    g <- ggplot(data = factPr, aes(x = yearmonth, y = ventas, fill = year)) +\n        theme_grey(base_size = 11) +\n        geom_bar(stat = \"identity\") +\n        geom_smooth(aes(x=yearmonth,y=ventas, group = 1, color = \"red\"), se=F, method=\"loess\",show_guide = FALSE,lwd=0.7) +\n        geom_smooth(aes(group = 1), se=F,\n                    method=\"glm\",\n                    formula=y ~ ns(x,8),\n                    family=gaussian(link=\"log\"),\n                    show_guide = FALSE, lwd=1) +\n        theme(axis.text.x  = element_text(angle=90, vjust=0.5, size=10), legend.position=\"none\") +\n        guides(legend = FALSE) +\n        xlab(\"Año/Mes\") +\n        ylab(\"Ventas totales (UN)\") +\n        ggtitle(paste(\"Ventas mensuales de\", list_prod[i]))\n    \n    print(g)\n    ## Save the graph \n    ggsave(g, file = paste(paste(\"ventasJim-\", list_prod[i], sep=\"\"), \".png\", sep=\"\"), width = 12, height = 6)\n}",
+    "created" : 1447521947895.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3202675117",
+    "id" : "D3EB17AE",
+    "lastKnownWriteTime" : 1444994927,
+    "path" : "~/JimInvoices-Proto/sales-all-products.R",
+    "project_path" : null,
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "type" : "r_source"
+}

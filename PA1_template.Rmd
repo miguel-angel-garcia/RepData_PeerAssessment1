@@ -1,25 +1,208 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research Course Project 1"
+author: "Miguel Ángel García"
+date: "2015/11/14"
+output: html_document
 ---
+# Introduction #
+Using data from activity monitoring devices, the goal of this assignment is to answer different question about this data with the help of the literate statistical programming *knitr* package.
 
+## The Dataset ##
+We'll use the [Activity Monitoring Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip) dataset, previously downloaded in the working directory.
 
-## Loading and preprocessing the data
+### Structure ###
+The first view of the data (using a simple text editor) shows a CSV file with a simple structure. Here are the first three rows:
 
+> "steps","date","interval"  
+> NA,"2012-10-01",0  
+> NA,"2012-10-01",5  
 
+As we can see, there are three columns in the dataset (the first row shows the names):
 
-## What is mean total number of steps taken per day?
+* **Steps:** Number of steps in the 5 minutes interval
+* **Date:** Date of the measure (in YYYY-MM-DD format)
+* **Interval:** 5 minutes interval of each measure
 
+It's noticed that the *steps* column has NA values.
 
+### Loading the Data ###
+We'll use the *dplyr* package to transform and filter the data. And we'll load it by using the *read.csv* function with the argument *header = TRUE*, as we know that the data has column names in the first row.
 
-## What is the average daily activity pattern?
+```{r, echo= TRUE, warning= FALSE, results= 'hide'}
+library(dplyr, warn.conflicts= FALSE, quietly= TRUE)
+actDS <- tbl_df(read.csv("activity.csv", header= TRUE))
+```
 
+### Some Initial Checks ###
+To verify that the data is properly loaded, we can do some simple validations. We'll start by printing the first 5 rows of the data:
+```{r, echo= TRUE}
+head(actDS, 5)
+```
 
+We can notice that the date column is not typed as *date*:
+```{r, echo= TRUE}
+typeof(actDS$date)
+```
 
-## Imputing missing values
+So we need to convert it:
+```{r, echo= TRUE}
+actDS$date <- as.Date(actDS$date)
+```
 
+# Questions #
+Now, we have the dataset ready to analyze, so we start to answer the questions one by one.
 
+## Number of Steps Taken per Day ##
+To answer this question, we use again the functions of the *dplyr* library, grouping by *date* and summarising the data by the *steps* ignoring the *NA* values.
 
-## Are there differences in activity patterns between weekdays and weekends?
+### Calculate of The Mean Steps per Day ###
+```{r, echo= TRUE}
+meanActbyDay <- actDS %>%
+    group_by(date) %>%
+    summarise(mean_steps= mean(steps, na.rm = TRUE))
+```
+
+To see the results in a convenient way, we can use the *xtable* library:
+```{r, echo= TRUE, results= 'asis', warning= FALSE}
+library(xtable, warn.conflicts= FALSE, quietly= TRUE)
+meanActbyDay$date <- as.character(meanActbyDay$date)
+actTable <- xtable(meanActbyDay)
+print(actTable, type= "html")
+```
+
+### Histogram of the Total Number of Steps per Day ###
+First, we need to do some calcutations again:
+```{r, echo= TRUE}
+totalActbyDay <- actDS %>%
+    group_by(date) %>%
+    summarise(total_steps= sum(steps, na.rm = TRUE))
+```
+
+We can do the histogram now:
+```{r, echo= TRUE}
+hist(totalActbyDay$total_steps, 
+     breaks= 30, 
+     col= "lightblue", 
+     main = "Histogram of Total Steps by Day", 
+     xlab= "Steps by Day")
+```
+
+### Report of the Mean and Median of the Total Number of Steps per Day ###
+We can show the mean and median using *mean()* and *median()* functions but, instead of doing this way, we can achieve same result in a more simple way:
+```{r, echo= TRUE}
+summary(totalActbyDay$total_steps)
+```
+
+We can see that the mean of the total number of steps is `r format(round(mean(totalActbyDay$total_steps), 2), scientific= FALSE)` and the median is `r format(round(median(totalActbyDay$total_steps), 2), scientific= FALSE)`.
+
+## Average Daily Activity Pattern ##
+Again, we need to do some calcutations to know what's the average interval across all days:
+```{r, echo= TRUE}
+meanActbyInterval <- actDS %>%
+    group_by(interval) %>%
+    summarise(mean_steps= mean(steps, na.rm = TRUE))
+```
+
+### Time Series Plot ###
+We'll use the *base* plotting system again, because this is a simple graphic:
+```{r, echo= TRUE}
+plot(x= meanActbyInterval$interval, 
+     y= meanActbyInterval$mean_steps, 
+     type= "l", 
+     col= "blue", 
+     main= "Time Series of Activity Pattern", 
+     xlab= "5 minute interval", 
+     ylab= "Average steps")
+```
+
+### Maximum Number of Steps ###
+We can see that the `r meanActbyInterval$interval[which(meanActbyInterval$mean_steps == max(meanActbyInterval$mean_steps))]` interval is the highest one.
+
+## Missing Values ##
+There are an important number of missing values in the data. Until now, we ignoring it (for example, using *na.rm* attribute), but now we'll gonna see if they are introducing bias.
+
+### Total Number of Missing Values ###
+There are `r sum(is.na(actDS$steps))` missing values *(NA)* in the *steps* column of the data.
+
+### Strategy to Avoid Missing Values ###
+In order to avoid all the bias in the data introduced by the existing missing values, we choose to replace it by the mean activity by interval (previously calculated).
+
+### Create a New Data Set with NA Filled In ###
+```{r, echo= TRUE}
+cleanActDS <- actDS %>%
+    inner_join(meanActbyInterval, by= "interval")
+cleanActDS$steps[is.na(cleanActDS$steps)] <- cleanActDS$mean_steps[is.na(cleanActDS$steps)]
+```
+
+### Histogram of the Total Number of Steps per Day (without NAs) ###
+In order to do that, we need some calcutations again:
+```{r, echo= TRUE}
+totalNewActbyDay <- cleanActDS %>%
+    group_by(date) %>%
+    summarise(total_steps= sum(steps, na.rm = TRUE))
+```
+
+We can do the new histogram:
+```{r, echo= TRUE}
+hist(totalNewActbyDay$total_steps, 
+     breaks= 30, 
+     col= "lightgreen", 
+     main = "Histogram of Total Steps by Day (without missing values)", 
+     xlab= "Steps by Day")
+```
+
+### Mean and Median of the Total Number of Steps per Day Without Missing Values ###
+We can see that the new mean of the total number of steps is `r format(round(mean(totalNewActbyDay$total_steps), 2), scientific= FALSE)` and the new median is `r format(round(median(totalNewActbyDay$total_steps), 2), scientific= FALSE)`.
+
+As we expected, we noted that the new mean and median values are slightly different from the above ones, because now we have a largest population with more repeated central values.
+
+## Differences in Activity Patterns Between Weekdays and Weekends ##
+### New Factor Variable ###
+I noticed that *weekdays()* function returns the day of the week name in the local language, so, in order to allow reproducibility, I opted for use the *is.weekend()* function, which is part of the *chron* package:
+
+```{r, echo= TRUE}
+library(chron, warn.conflicts= FALSE, quietly= TRUE)
+weekActDS <- cleanActDS
+weekActDS$weekend <- NA
+weekActDS$weekend[which(is.weekend(weekActDS$date))] <- "weekend"
+weekActDS$weekend[which(!is.weekend(weekActDS$date))] <- "weekday"
+weekActDS$weekend <- factor(weekActDS$weekend)
+table(weekActDS$weekend)
+```
+
+### Time Series Panel Plot ###
+First, the calcutations:
+```{r, echo= TRUE}
+meanWeekendActbyInterval <- weekActDS %>%
+    filter(weekend == "weekend") %>%
+    group_by(interval) %>%
+    summarise(mean_steps= mean(steps, na.rm = TRUE))
+
+meanWeekdayActbyInterval <- weekActDS %>%
+    filter(weekend == "weekday") %>%
+    group_by(interval) %>%
+    summarise(mean_steps= mean(steps, na.rm = TRUE))
+```
+
+Now, the plots:
+```{r, echo= TRUE, fig.height= 8}
+par(mfrow= c(2, 1))
+
+plot(x= meanWeekendActbyInterval$interval, 
+     y= meanWeekendActbyInterval$mean_steps, 
+     type= "l", 
+     col= "green", 
+     main= "Activity Pattern (Weekend)", 
+     xlab= "5 minute interval", 
+     ylab= "Average steps")
+
+plot(x= meanWeekdayActbyInterval$interval, 
+     y= meanWeekdayActbyInterval$mean_steps, 
+     type= "l", 
+     col= "red", 
+     main= "Activity Pattern (Weekday)", 
+     xlab= "5 minute interval", 
+     ylab= "Average steps")
+```
+
+*(Sorry for my english, I hope you understand me anyway ;-)*

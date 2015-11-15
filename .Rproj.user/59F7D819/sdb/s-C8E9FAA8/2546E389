@@ -1,0 +1,25 @@
+{
+    "contents" : "",
+    "created" : 1447615710693.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "2546E389",
+    "lastKnownWriteTime" : 13229740524830817,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "bq49p1ho7p",
+        "caption" : "copyact",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=copyact&cache_key=bq49p1ho7p",
+        "displayedObservations" : 17568,
+        "environment" : "",
+        "object" : "copyact",
+        "totalObservations" : 17568,
+        "variables" : 5
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "type" : "r_dataframe"
+}
